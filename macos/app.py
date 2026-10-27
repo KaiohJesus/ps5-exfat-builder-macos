@@ -1,17 +1,15 @@
 """Tk desktop UI. Worker threads communicate only through a queue."""
 from __future__ import annotations
 
-import ftplib
 import json
 from pathlib import Path
 import queue
-import subprocess
 import sys
 import threading
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
-from macos.backend import NativeImages, ftp_connect, upload, check_cancel
+from macos.backend import NativeImages, ftp_connect, upload, download, check_cancel
 
 VERSION = '4.0.2-mac.1'
 
@@ -226,30 +224,8 @@ class App(tk.Tk):
             return
         args = self.connection_args()
         def work():
-            import os
-            done = 0
             with ftp_connect(*args) as ftp:
-                ftp.voidcmd('TYPE I')
-                size = ftp.size(remote)
-                if size is None:
-                    raise ValueError('Server cannot report file size')
-                # Exclusive destination: failed/cancelled download remains visibly partial.
-                partial = Path(local + '.partial')
-                with partial.open('xb') as stream:
-                    def write(block):
-                        nonlocal done
-                        check_cancel(self.cancel)
-                        stream.write(block)
-                        done += len(block)
-                        self.progress('FTP download', done, max(size, 1), remote)
-                    ftp.retrbinary(f'RETR {remote}', write, blocksize=256 * 1024)
-                    stream.flush()
-                    os.fsync(stream.fileno())
-                if done != size:
-                    raise ValueError('Downloaded size does not match server')
-                check_cancel(self.cancel)
-                from macos.backend import publish
-                publish(partial, Path(local))
+                download(ftp, remote, local, self.cancel, self.progress)
             return f'Downloaded: {local}'
         self.start(work)
 

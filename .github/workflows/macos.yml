@@ -28,7 +28,10 @@ jobs:
       - name: Verify native exFAT build and extraction
         env:
           EXFAT_NATIVE_TEST: '1'
-        run: '"$EXFAT_PYTHON" -m unittest discover -s tests -v'
+        run: |
+          "$EXFAT_PYTHON" -m venv .venv-tests
+          .venv-tests/bin/python -m pip install pyftpdlib==2.1.0
+          .venv-tests/bin/python -m unittest discover -s tests -v
       - name: Build application
         run: ./build_macos.sh
       - name: Check executable architecture and bundle

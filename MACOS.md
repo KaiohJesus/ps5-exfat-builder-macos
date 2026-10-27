@@ -41,6 +41,8 @@ console boot compatibility still requires testing on PS5 hardware.
 
 ## Build a standalone .app
 
+Double-click `build_macos.command`, or run:
+
 ```sh
 ./build_macos.sh
 ```
@@ -92,6 +94,10 @@ python3 -m unittest discover -s tests -v
 EXFAT_NATIVE_TEST=1 python3 -m unittest discover -s tests -v
 ```
 
+Optional local FTP round-trip checks: install `pyftpdlib==2.1.0` in your test
+virtual environment, then run the same test command. It is not an application
+dependency.
+
 The native test builds and verifies a raw image, detaches it, reattaches it
 read-only, extracts it, then compares bytes including Unicode paths, empty
 files and empty directories. The build workflow requires this round trip before
@@ -104,3 +110,10 @@ https://github.com/kerrdec97/ps5-exfat-builder . Preserve all upstream notices i
 `THIRD_PARTY_NOTICES.md`. The macOS entry point does not execute or bundle the
 embedded Windows executables or PS5 payloads. This tool is for personal backups
 of legally owned content and is not affiliated with Sony.
+
+## Initial validation status
+
+Local tests: nine passed (including real localhost FTP transfers); native macOS
+image and Aqua-window tests require a Mac. The initial GitHub Actions attempt
+was blocked before execution because GitHub reported an account billing lock.
+No compiled or notarized application is claimed until the native workflow passes.

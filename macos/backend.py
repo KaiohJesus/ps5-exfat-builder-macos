@@ -44,7 +44,9 @@ def scan(source: Path, cancel: threading.Event) -> list[Entry]:
         raise ValueError('Select a source folder')
     entries = []
     names = set()
-    for root, dirs, files in os.walk(source, followlinks=False):
+    def on_error(error):
+        raise error
+    for root, dirs, files in os.walk(source, followlinks=False, onerror=on_error):
         check_cancel(cancel)
         dirs[:] = sorted(n for n in dirs if n not in SYSTEM_NAMES)
         for name in dirs + sorted(n for n in files if n not in SYSTEM_NAMES):
@@ -330,3 +332,35 @@ def upload(ftp, local, remote, cancel, progress=lambda *args: None):
         # is safer than issuing commands that could target the wrong transfer.
         ftp.close()
         raise RuntimeError(f'Upload incomplete; remote temporary file may remain: {temp}')
+
+
+def download(ftp, remote, destination, cancel, progress=lambda *args: None):
+    destination = Path(destination)
+    if '\r' in remote or '\n' in remote:
+        raise ValueError('Invalid remote filename')
+    if destination.exists():
+        raise FileExistsError(destination)
+    partial = destination.with_name(destination.name + '.partial')
+    ftp.voidcmd('TYPE I')
+    size = ftp.size(remote)
+    if size is None:
+        raise ValueError('Server cannot report file size')
+    done = 0
+    try:
+        with partial.open('xb') as stream:
+            def write(block):
+                nonlocal done
+                check_cancel(cancel)
+                stream.write(block)
+                done += len(block)
+                progress('FTP download', done, max(size, 1), remote)
+            ftp.retrbinary(f'RETR {remote}', write, blocksize=256 * 1024)
+            stream.flush()
+            os.fsync(stream.fileno())
+        if done != size:
+            raise ValueError('Downloaded size does not match server')
+        check_cancel(cancel)
+        publish(partial, destination)
+    except Exception as exc:
+        ftp.close()
+        raise RuntimeError(f'{exc}\nPartial download: {partial}') from exc

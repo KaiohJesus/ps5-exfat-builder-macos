@@ -139,5 +139,15 @@ class NativeRoundTrip(unittest.TestCase):
                     self.assertEqual(path.read_bytes(), copied.read_bytes())
 
 
-if __name__ == '__main__':
-    unittest.main()
+@unittest.skipUnless(sys.platform == 'darwin', 'Tk Aqua smoke test requires macOS')
+class DesktopSmoke(unittest.TestCase):
+    def test_window_and_tabs(self):
+        from macos.app import App
+        app = App()
+        try:
+            app.update()
+            self.assertEqual(app.status.get(), 'Ready')
+            self.assertEqual(len(app.jobs), 0)
+            self.assertGreater(app.winfo_width(), 700)
+        finally:
+            app.destroy()
