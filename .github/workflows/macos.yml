@@ -1,0 +1,45 @@
+name: macOS application
+on:
+  push:
+    branches: [main, macos-native]
+    paths: ['macos/**', 'macos_app.py', 'tests/**', 'build_macos.sh', 'requirements-macos-build.txt', '.github/workflows/macos.yml']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Python with Tk
+        run: |
+          brew install python@3.12 python-tk@3.12
+          echo "EXFAT_PYTHON=$(brew --prefix python@3.12)/bin/python3.12" >> "$GITHUB_ENV"
+      - name: Verify native exFAT build and extraction
+        env:
+          EXFAT_NATIVE_TEST: '1'
+        run: |
+          "$EXFAT_PYTHON" -m venv .venv-tests
+          .venv-tests/bin/python -m pip install pyftpdlib==2.1.0
+          .venv-tests/bin/python -m unittest discover -s tests -v
+      - name: Build application
+        run: ./build_macos.sh
+      - name: Check executable architecture and bundle
+        run: |
+          file 'dist/exFAT Image Builder macOS.app/Contents/MacOS/exFAT Image Builder macOS'
+          codesign --verify --deep --strict 'dist/exFAT Image Builder macOS.app'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: exFAT-Image-Builder-macOS-${{ matrix.arch }}
+          path: release/*
+          if-no-files-found: error

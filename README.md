@@ -1,3 +1,14 @@
+# macOS fork
+
+The native macOS entry point is `macos_app.py`. See [MACOS.md](MACOS.md) for
+features, build instructions, current limitations and native tests. The
+[macOS application workflow](../../actions/workflows/macos.yml) generates
+separate Apple Silicon and Intel `.app` ZIP artifacts.
+
+The Windows code and its original documentation follow below.
+
+---
+
 # 🎮 exFAT Image Builder
 
 **The Ultimate Windows Toolkit for Building, Editing & Backporting PS5
